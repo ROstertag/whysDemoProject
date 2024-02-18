@@ -1,8 +1,10 @@
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 
-class Model1(models.Model):
-    column_1 = models.CharField(max_length=255)
-    column_2 = models.JSONField(default=list)
+class DataModel(models.Model):
+    model_id = models.IntegerField()
+    type = models.CharField(max_length=255)
+    columns = models.JSONField()
 
-class Model2(models.Model):
-    column_1 = models.CharField(max_length=255)
+    class Meta:
+        unique_together = ('model_id', 'type')

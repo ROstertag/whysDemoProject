@@ -1,25 +1,30 @@
-from django.shortcuts import render
-from rest_framework import generics
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Model1, Model2
-from .serializers import Model1Serializer, Model2Serializer
+from rest_framework import status
+from .models import DataModel
 
-class ImportDataView(generics.CreateAPIView):
-    serializer_class = Model1Serializer  # You can use any model capable of processing input data
+class DataImportView(APIView):
+    def post(self, request):
+        data = request.data
+        try:
+            if DataModel.objects.exists():
+                DataModel.objects.all().delete()
+            for item in data:
+                for model_name, model_data in item.items():
+                    model_id = model_data['id']
+                    DataModel.objects.get_or_create(model_id=model_id, type=model_name, defaults={"columns": item})
 
-class DetailDataView(generics.ListAPIView):
-    serializer_class = Model1Serializer  # Use Model1 or Model2 as needed
+            return Response(status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get_queryset(self):
-        model_name = self.kwargs['model_name']
-        if model_name == 'model1':
-            return Model1.objects.all()
-        elif model_name == 'model2':
-            return Model2.objects.all()
-        else:
-            return []
-
-class DetailRecordView(generics.RetrieveAPIView):
-    queryset = Model1.objects.all()  # Use Model1 or Model2 as needed
-    serializer_class = Model1Serializer
-    lookup_field = 'id'  # You can use 'id' or another appropriate identifier to find the record
+class DataDetailView(APIView):
+    def get(self, request, model_name, model_id=None):
+        try:
+            if not model_id:
+                data = DataModel.objects.filter(type=model_name).values_list('columns', flat=True)
+            else:
+                data = DataModel.objects.filter(type=model_name, model_id=model_id).values_list('columns', flat=True)
+            return Response(data)
+        except DataModel.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
